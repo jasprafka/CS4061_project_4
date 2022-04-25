@@ -101,26 +101,53 @@ void freemakeargv(char **argv) {
    - if init encounters any errors, it will call exit().
 ************************************************/
 void init(int port) {
-   // set up sockets using bind, listen
-   // also do setsockopt(SO_REUSEADDR)
-   // exit if the port number is already in use
+	// set up sockets using bind, listen
+	// also do setsockopt(SO_REUSEADDR)
+	// exit if the port number is already in use
+	
+	//Create socket, store return value in master_fd
+	master_fd = -1;
+	master_fd = socket(AF_INET, SOCK_STREAM, 0);
+	if(master_fd == -1) {
+		printf("Error, could not create socket. Exiting.\n");
+		exit(-1);
+	} else {	
+		printf("Socket created (master_fd: %d)\n", master_fd);
+	}	
 
-   
-   //Create socket, store return value in master_fd
-   master_fd = -1;
-   
-   
-   //Use setsockopt with SO_REUSEADDR
-   
-   
-   //Bind socket
-   
+	//Use setsockopt with SO_REUSEADDR
+	int enable = 1, sockopt_return_code;
+	sockopt_return_code = setsockopt(master_fd, SOL_SOCKET, SO_REUSEADDR, (char*)&enable, sizeof(int));
 
-   //Listen
-  
+	if(sockopt_return_code == -1) {	
+		printf("Error, could not set socket options. Exiting.\n"); 
+		exit(-1);
+	} else {	
+		printf("Socket options set\n");	
+	}
+
+	//Bind socket
+	struct sockaddr_in addr;
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	addr.sin_port = htons(port); // Server picks port
+	if(bind(master_fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {	
+		printf("Error, could not bind socket. Exiting.\n"); 
+		exit(-1);
+	} else {
+		printf("Socket bound\n");	
+	}
+
+	//Listen
+ 	if(listen(master_fd, 20) == -1) {
+		printf("Error, could not listen on socket. Exiting.\n"); 
+		exit(-1);
+	} else {
+		printf("Socket listening\n");	
+	}
    
-   //If successful should print
-   printf("UTILS.O: Server Started on Port %d\n",port);
+	//If successful should print
+	printf("UTILS.O: Server Started on Port %d\n",port);
 
 }
 
@@ -133,11 +160,17 @@ void init(int port) {
      accept_connection must should ignore request.
 ***********************************************/
 int accept_connection(void) {
+	
+	struct sockaddr_in client_addr;
+	int client_fd, addr_size = sizeof(client_addr);
 
-   /* 
-      Should we use locks?    
-   */
-  return -1;
+	client_fd = accept(master_fd, (struct sockaddr*)&client_addr, (socklen_t*)&addr_size);
+
+	//printf("Client address: %d\n", client_fd);
+
+	return client_fd;
+
+	//return -1;
 }
 
 /**********************************************
@@ -167,28 +200,61 @@ int get_request(int fd, char *filename) {
       otherwise, store the path/filename into 'filename'.
    */
 
-   //Read first line from fd (The rest does not matter to us)
-   //Look at fgets
-   
+	//Read first line from fd (The rest does not matter to us)
+	//Look at fgets
+	
+	//printf("fd:%d\nrequest:%s\n", fd, filename);
+	//if(open(fd
+
+	char buf[1024];
+	int bytes_read;
+	if((bytes_read = read(fd, buf, 1024)) == -1) {
+		printf("Error, could not read fd\n");
+		return -1;
+	} else {	
+	//	printf("Read %d bytes from fd\n", bytes_read);
+	//	printf("%s\n", buf);
+	}
+
+	if(strchr(buf, '\0') == NULL) {
+		printf("Error, possible buffer overflow.\n");
+		return -1;
+	}
 
 
-   //Pass the first line read into makeargv
-   //Look at makeargv comments for usage
-   
+	//Pass the first line read into makeargv
+	//Look at makeargv comments for usage
+	char ** result;
+ 	makeargv(buf," \n",&result);
+	//Error checks
+	
+	printf("\nIntermediate submission: %s %s %s\n\n", result[0], result[1], result[2]);
+	
+	if(strstr(result[0], "GET") == NULL) {
+		printf("Bad GET request.\n");
+		return -1;
+	}
 
-   //Error checks
-   
+	if(strstr(result[1], "..") != NULL || strstr(result[1], "//") != NULL) {
+		printf("Malicious file requested.\n");
+		return -1;	
+	}
 
-   //Passed error checks copy the path into filename
-   
-   
-   //Call freemakeargv to free memory
-   
+	if(strlen(result[1]) > 1024) {
+		printf("Possible overflow.\n");
+		return -1;
+	}
 
-   //Return success
+	//Passed error checks copy the path into filename
+	strcpy(filename, result[1]);
+	printf("File requested: %s\n", filename);
+	//Call freemakeargv to free memory
+	freemakeargv(result);
 
-   //Remove return -1 once you are done implementing
-   return -1;
+	//Return success
+
+	//Remove return -1 once you are done implementing
+	return 0;
 
 }
 
