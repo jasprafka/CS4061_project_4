@@ -163,14 +163,12 @@ int accept_connection(void) {
 	
 	struct sockaddr_in client_addr;
 	int client_fd, addr_size = sizeof(client_addr);
-
+	
+	// Accept the connection
 	client_fd = accept(master_fd, (struct sockaddr*)&client_addr, (socklen_t*)&addr_size);
-
-	//printf("Client address: %d\n", client_fd);
-
+	
+	// Returns fd on success, -1 on failure.
 	return client_fd;
-
-	//return -1;
 }
 
 /**********************************************
@@ -203,17 +201,11 @@ int get_request(int fd, char *filename) {
 	//Read first line from fd (The rest does not matter to us)
 	//Look at fgets
 	
-	//printf("fd:%d\nrequest:%s\n", fd, filename);
-	//if(open(fd
-
 	char buf[1024];
 	int bytes_read;
 	if((bytes_read = read(fd, buf, 1024)) == -1) {
 		printf("Error, could not read fd\n");
 		return -1;
-	} else {	
-	//	printf("Read %d bytes from fd\n", bytes_read);
-	//	printf("%s\n", buf);
 	}
 
 	if(strchr(buf, '\0') == NULL) {
@@ -226,10 +218,8 @@ int get_request(int fd, char *filename) {
 	//Look at makeargv comments for usage
 	char ** result;
  	makeargv(buf," \n",&result);
-	//Error checks
 	
-	printf("\nIntermediate submission: %s %s %s\n\n", result[0], result[1], result[2]);
-	
+	//Error checks	
 	if(strstr(result[0], "GET") == NULL) {
 		printf("Bad GET request.\n");
 		return -1;
@@ -245,15 +235,14 @@ int get_request(int fd, char *filename) {
 		return -1;
 	}
 
-	//Passed error checks copy the path into filename
+	//Passed error checks, copy the path into filename
 	strcpy(filename, result[1]);
 	printf("File requested: %s\n", filename);
+	
 	//Call freemakeargv to free memory
 	freemakeargv(result);
 
 	//Return success
-
-	//Remove return -1 once you are done implementing
 	return 0;
 
 }
@@ -287,16 +276,55 @@ int return_result(int fd, char *content_type, char *buf, int numbytes) {
 
    */
 
-   //Send headers
+	char httpOK[17], conType[26], conLen[32], connection[19], blankLine[2];
+	sprintf(httpOK, "HTTP/1.1 200 OK\n");
+	sprintf(conType, "Content-Type: %s\n", content_type);
+	sprintf(conLen, "Content-Length: %d\n", numbytes);
+	sprintf(connection, "Connection: Close\n");
+	sprintf(blankLine, "\n");
 
-   //Send Result file
+	int returnVal = 0, bytesWritten = 0;
 
-   //Close connection
+	//Send headers
+	if((bytesWritten = write(fd, httpOK, 17)) <= 0) {
+		printf("Error, unable to write to fd %d\n", fd);
+		returnVal = -1;
+	}
 
-   //Return success
 
-   //Remove return -1 once you are done implementing
-   return -1;
+	if((bytesWritten = write(fd, conType, 26)) <= 0) {
+		printf("Error, unable to write to fd %d\n", fd);
+		returnVal = -1;
+	}
+
+	if((bytesWritten = write(fd, conLen, 32)) <= 0) {
+		printf("Error, unable to write to fd %d\n", fd);
+		returnVal = -1;
+	}
+
+	if((bytesWritten = write(fd, connection, 19)) <= 0) {
+		printf("Error, unable to write to fd %d\n", fd);
+		returnVal = -1;
+	}
+
+	if((bytesWritten = write(fd, blankLine, 2)) <= 0) {
+		printf("Error, unable to write to fd %d\n", fd);
+		returnVal = -1;
+	}
+
+	//Send Result file
+	if((bytesWritten = write(fd, buf, numbytes)) <= 0) {
+		printf("Error, unable to write to fd %d\n", fd);
+		returnVal = -1;
+	}
+
+	//Close connection
+	if(close(fd) == -1) {
+		printf("Error, unable to close fd %d\n", fd);
+	}
+	
+	//Return success
+	return returnVal;
 }
 
 
@@ -319,13 +347,56 @@ int return_error(int fd, char *buf) {
    */
    
    //Send headers
+   	int returnVal = 0, numbytes = 25;
+	int bytesWritten = 0; 
+	char httpError[24], conType[26], conLen[32], connection[19], blankLine[2];
+	sprintf(httpError, "HTTP/1.1 404 Not Found\n");
+	sprintf(conType, "Content-Type: text/html\n");
+	sprintf(conLen, "Content-Length: %d\n", numbytes);
+	sprintf(connection, "Connection: Close\n");
+	sprintf(blankLine, "\n");
 
-   //Send Result file
+	
+	buf = "Requested file not found.\n";
 
-   //Close connection
+	//Send headers
+	if((bytesWritten = write(fd, httpError, 24)) <= 0) {
+		printf("Error, unable to write to fd %d\n", fd);
+		returnVal = -1;
+	}
 
-   //Return success
 
-   //Remove return -1 once you are done implementing
-   return -1;
+	if((bytesWritten = write(fd, conType, 26)) <= 0) {
+		printf("Error, unable to write to fd %d\n", fd);
+		returnVal = -1;
+	}
+
+	if((bytesWritten = write(fd, conLen, 32)) <= 0) {
+		printf("Error, unable to write to fd %d\n", fd);
+		returnVal = -1;
+	}
+
+	if((bytesWritten = write(fd, connection, 19)) <= 0) {
+		printf("Error, unable to write to fd %d\n", fd);
+		returnVal = -1;
+	}
+
+	if((bytesWritten = write(fd, blankLine, 2)) <= 0) {
+		printf("Error, unable to write to fd %d\n", fd);
+		returnVal = -1;
+	}
+
+	//Send Result file
+	if((bytesWritten = write(fd, buf, numbytes)) <= 0) {
+		printf("Error, unable to write to fd %d\n", fd);
+		returnVal = -1;
+	} 
+
+	//Close connection
+	if(close(fd) == -1) {
+		printf("Error, unable to close fd %d\n", fd);
+	}
+	
+	//Return success
+	return returnVal;
 }
