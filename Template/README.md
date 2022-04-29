@@ -1,4 +1,4 @@
-CS4061_project_3
+CS4061_project_4
 
 Names:
 
@@ -38,14 +38,16 @@ Contributions of each team member:
 
 Intermediate Submission:
 
-TerminationHandler - Jacob
+init - Jacob
 
-Dispatcher - Jacob
+accept_connection - Jacob
 
 Final Submission:
 
-Dispatcher - Jacob
+get_request - Jacob
 
-Worker - Jacob
+return_result - Jacob
+
+return_error - Jacob
 
 README.md - Jacob
